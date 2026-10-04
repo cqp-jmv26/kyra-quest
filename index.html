@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f23">
+<title>Kyra's Secret Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   KYRA'S SECRET QUEST — 8-bit road trip, Santa Barbara → LA
+   ========================================================= */
+:root{
+  --bg:#0f0f23; --ink:#f4f4f4; --dim:#8a8ab0;
+  --box1:#1d2b9c; --box2:#0b1260; --border:#f4f4f4;
+  --pink:#ff4fa3; --yellow:#ffd23f; --teal:#2de2e6; --red:#e01e37; --green:#4be37a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+body{
+  font-family:'VT323',monospace;font-size:22px;line-height:1.15;
+  min-height:100dvh;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px),
+    var(--bg);
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+.ps{font-family:'Press Start 2P',monospace;letter-spacing:.5px}
+#app{max-width:480px;margin:0 auto;padding:10px 12px 28px;display:flex;flex-direction:column;gap:10px}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--yellow)}
+.hud .p1{color:var(--pink)}
+.hud button{background:none;border:0;color:var(--ink);font:inherit;font-size:14px;padding:4px;cursor:pointer}
+
+/* scene */
+.scene-wrap{position:relative;border:3px solid var(--border);box-shadow:0 0 0 3px #000, 6px 6px 0 3px #000;background:#000}
+#scene{display:block;width:100%;aspect-ratio:16/9;image-rendering:pixelated;image-rendering:crisp-edges}
+.stage-tag{position:absolute;left:6px;top:6px;font-size:8px;background:rgba(0,0,0,.6);padding:5px 6px;color:var(--yellow);line-height:1.5}
+.stage-tag span{color:var(--ink);display:block;font-size:7px}
+
+/* route map */
+.route{display:flex;align-items:center;justify-content:space-between;position:relative;padding:4px 4px 0}
+.route::before{content:"";position:absolute;left:10px;right:10px;top:10px;height:4px;background:repeating-linear-gradient(90deg,#555 0 6px,transparent 6px 10px)}
+.stop{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:1;flex:1}
+.stop i{width:12px;height:12px;background:#333;border:2px solid #777;display:block}
+.stop.done i{background:var(--green);border-color:#fff}
+.stop.here i{background:var(--pink);border-color:#fff;animation:blink .6s steps(2) infinite}
+.stop b{font-family:'Press Start 2P';font-size:6px;color:var(--dim);font-weight:normal}
+.stop.here b,.stop.done b{color:var(--ink)}
+
+/* tesla progress */
+.tesla-box{border:3px solid var(--border);background:linear-gradient(#141432,#0b0b1f);padding:8px 8px 6px;box-shadow:6px 6px 0 #000}
+.tesla-head{display:flex;justify-content:space-between;font-size:8px;margin-bottom:6px;color:var(--teal)}
+.battery{display:inline-flex;align-items:center;gap:4px}
+.battery .cells{display:inline-flex;gap:2px;border:2px solid var(--ink);padding:1px}
+.battery .cells s{width:6px;height:8px;background:#222;display:block;text-decoration:none}
+.battery .cells s.on{background:var(--green)}
+#tesla{width:100%;display:block;shape-rendering:crispEdges}
+#tesla rect.off{fill:rgba(255,255,255,.06)}
+#tesla rect.pop{animation:popin .35s steps(3) both}
+@keyframes popin{0%{opacity:0;fill:#fff}60%{opacity:1;fill:#fff}}
+#beam{opacity:0;transition:opacity .4s}
+#beam.on{opacity:.35;animation:flick 2s steps(2) infinite}
+@keyframes flick{50%{opacity:.25}}
+.road-line{height:4px;background:repeating-linear-gradient(90deg,var(--yellow) 0 10px,transparent 10px 20px);margin-top:4px;opacity:.6}
+.part-name{font-size:7px;color:var(--dim);text-align:center;margin-top:6px}
+
+/* dialog box — classic JRPG window */
+.dialog{
+  position:relative;background:linear-gradient(var(--box1),var(--box2));
+  border:4px solid var(--border);border-radius:6px;
+  box-shadow:0 0 0 3px #000, 6px 6px 0 3px #000;
+  padding:14px 14px 12px;
+}
+.dialog .who{font-size:9px;color:var(--yellow);margin-bottom:10px}
+#riddle{min-height:150px;white-space:pre-wrap;font-size:24px;line-height:1.15}
+#riddle .scramble{display:block;text-align:center;font-family:'Press Start 2P';font-size:15px;color:var(--yellow);margin:10px 0;line-height:1.6}
+.caret{display:inline-block;width:10px;height:18px;background:var(--ink);vertical-align:-2px;animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.answer-row{display:flex;gap:8px;margin-top:12px}
+#answer{
+  flex:1;min-width:0;font-family:'Press Start 2P';font-size:16px;text-transform:uppercase;
+  background:#000;color:var(--green);border:3px solid var(--ink);padding:10px 8px;border-radius:0;
+  outline:none;-webkit-appearance:none;caret-color:var(--green);
+}
+#answer:focus{border-color:var(--yellow)}
+#answer::placeholder{color:#2f6f45}
+.btn{
+  font-family:'Press Start 2P';font-size:11px;border:0;cursor:pointer;color:#fff;
+  padding:12px 12px;background:var(--red);box-shadow:inset -3px -3px 0 rgba(0,0,0,.35), inset 3px 3px 0 rgba(255,255,255,.25), 0 4px 0 #000;
+  touch-action:manipulation;
+}
+.btn:active{transform:translateY(3px);box-shadow:inset -3px -3px 0 rgba(0,0,0,.35), 0 1px 0 #000}
+.btn.alt{background:#5b5bd6}
+.btn.big{font-size:13px;padding:16px 20px}
+.controls{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+#msg{font-size:9px;min-height:12px;color:var(--yellow);font-family:'Press Start 2P';line-height:1.6}
+#msg.bad{color:var(--pink)}
+.hint-text{margin-top:10px;font-size:20px;color:var(--teal);display:none}
+.hint-text.show{display:block}
+.shake{animation:shake .4s steps(6)}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+/* inventory */
+.inv{border:3px solid var(--border);background:#111;padding:10px;box-shadow:6px 6px 0 #000}
+.inv h3{font-size:9px;color:var(--pink);margin-bottom:8px;font-weight:normal}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.slot{border:2px dashed #444;padding:6px;min-height:52px}
+.slot.wide{grid-column:span 2}
+.slot small{display:block;font-family:'Press Start 2P';font-size:7px;color:var(--dim);margin-bottom:4px}
+.slot div{font-size:22px;color:#555}
+.slot.got{border:2px solid var(--green);background:#0d2a17}
+.slot.got div{color:#fff}
+.slot.flash{animation:flash .15s steps(2) 6}
+@keyframes flash{50%{background:var(--yellow)}}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(5,5,20,.92);padding:20px;text-align:center;gap:18px}
+.overlay.show{display:flex}
+#title{background:
+  linear-gradient(transparent 55%, rgba(255,79,163,.25)),
+  radial-gradient(circle at 50% 38%, #ff9e5e 0 60px, transparent 61px),
+  linear-gradient(#0b0b2b,#3b1a6a 55%,#e8457a 56%,#0b0b2b 57%,#0b0b2b);}
+.logo{font-size:22px;line-height:1.5;color:var(--yellow);text-shadow:3px 3px 0 var(--pink),6px 6px 0 #000}
+.logo small{display:block;font-size:10px;color:var(--teal);text-shadow:2px 2px 0 #000;margin-top:8px}
+.press{font-size:12px;animation:blink .8s steps(2) infinite}
+.credit{font-size:8px;color:var(--dim);line-height:1.8}
+
+.card{background:linear-gradient(var(--box1),var(--box2));border:4px solid #fff;box-shadow:0 0 0 3px #000,8px 8px 0 3px #000;padding:18px 16px;max-width:360px;width:100%}
+.card .ps{line-height:1.7}
+.unlock-title{font-size:12px;color:var(--yellow)}
+.unlock-label{font-size:9px;color:var(--teal);margin-top:14px}
+.unlock-value{font-size:34px;margin-top:6px;color:#fff;text-shadow:3px 3px 0 #000}
+.unlock-part{font-size:8px;color:var(--pink);margin-top:14px}
+
+.stagecard .num{font-size:12px;color:var(--pink)}
+.stagecard .place{font-size:20px;color:var(--yellow);line-height:1.5;text-shadow:3px 3px 0 #000}
+.stagecard .sub{font-size:22px;color:var(--teal)}
+
+/* final ticket */
+#final{overflow-y:auto;justify-content:flex-start;padding-top:calc(24px + env(safe-area-inset-top))}
+.ticket{position:relative;width:100%;max-width:380px;background:#f6ecd2;color:#1a1a2e;padding:18px 16px;
+  box-shadow:8px 8px 0 #000;border:4px solid #000;text-align:left}
+.ticket::before,.ticket::after{content:"";position:absolute;top:50%;width:22px;height:22px;background:#05050f;border:4px solid #000;border-radius:50%;transform:translateY(-50%)}
+.ticket::before{left:-15px}.ticket::after{right:-15px}
+.ticket .admit{font-family:'Press Start 2P';font-size:9px;color:var(--red);margin-bottom:10px;display:flex;justify-content:space-between}
+.ticket .artist{font-family:'Press Start 2P';font-size:17px;line-height:1.5;margin-bottom:8px}
+.ticket .row{font-size:24px;line-height:1.1}
+.ticket .perf{border-top:4px dashed #1a1a2e;margin:12px 0}
+.seatgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.seatgrid div{border:3px solid #1a1a2e;padding:6px 2px;background:#fff}
+.seatgrid small{display:block;font-family:'Press Start 2P';font-size:7px;color:#666}
+.seatgrid b{font-family:'Press Start 2P';font-size:16px;display:block;margin-top:4px}
+.final-msg{font-size:12px;color:var(--yellow);line-height:1.8;text-shadow:2px 2px 0 #000}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:30;image-rendering:pixelated}
+.footer{text-align:center;font-size:7px;color:#444;margin-top:6px}
+.footer button{background:none;border:0;color:#555;font:inherit;text-decoration:underline;cursor:pointer;padding:6px}
+a.map{color:var(--teal);font-family:'Press Start 2P';font-size:9px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ TITLE SCREEN ============ -->
+<div class="overlay show" id="title">
+  <div class="logo ps">SECRET<br>QUEST<small>SANTA BARBARA ▸ SO CAL</small></div>
+  <div class="credit ps">PLAYER 1: <span id="pname">KYRA</span><br>7 RIDDLES · 1 TESLA · 1 SECRET NIGHT</div>
+  <button class="btn big" id="startBtn">▶ PRESS START</button>
+  <div class="credit ps">© 1989 ROAD TRIP SOFT</div>
+</div>
+
+<!-- ============ STAGE CARD ============ -->
+<div class="overlay" id="stagecard">
+  <div class="card stagecard">
+    <div class="num ps" id="scNum">STAGE 1</div>
+    <div class="place ps" id="scPlace" style="margin-top:14px">SANTA BARBARA</div>
+    <div class="sub" id="scSub" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ============ UNLOCK CARD ============ -->
+<div class="overlay" id="unlock">
+  <div class="card">
+    <div class="unlock-title ps">★ CLUE UNLOCKED ★</div>
+    <div class="unlock-label ps" id="ulLabel">ARTIST</div>
+    <div class="unlock-value" id="ulValue">—</div>
+    <div class="unlock-part ps" id="ulPart">+ TESLA PART</div>
+    <button class="btn" id="ulNext" style="margin-top:18px">CONTINUE ▶</button>
+  </div>
+</div>
+
+<!-- ============ FINAL ============ -->
+<div class="overlay" id="final">
+  <div class="final-msg ps">★ QUEST COMPLETE ★<br><span id="fName">KYRA</span>, YOU'RE GOING TO...</div>
+  <div class="ticket">
+    <div class="admit"><span>ADMIT TWO</span><span id="tName">KYRA</span></div>
+    <div class="artist" id="tArtist"></div>
+    <div class="row" id="tDate"></div>
+    <div class="row" id="tTime"></div>
+    <div class="row" id="tVenue" style="margin-top:6px"></div>
+    <div class="row" id="tAddr" style="font-size:19px;color:#555"></div>
+    <div class="perf"></div>
+    <div class="seatgrid">
+      <div><small>SEC</small><b id="tSec"></b></div>
+      <div><small>ROW</small><b id="tRow"></b></div>
+      <div><small>SEAT</small><b id="tSeat"></b></div>
+    </div>
+  </div>
+  <a class="map" id="mapLink" target="_blank" rel="noopener">▸ OPEN IN MAPS</a>
+  <div class="final-msg ps" style="font-size:9px">📸 SCREENSHOT YOUR TICKET!</div>
+  <button class="btn alt" id="replay">↺ PLAY AGAIN</button>
+</div>
+<canvas id="confetti"></canvas>
+
+<!-- ============ GAME ============ -->
+<main id="app">
+  <div class="hud ps">
+    <span class="p1">1UP <span id="hudName">KYRA</span></span>
+    <span id="hudStage">STAGE 1/7</span>
+    <button id="muteBtn" aria-label="Toggle sound">🔊</button>
+  </div>
+
+  <div class="scene-wrap">
+    <canvas id="scene" width="160" height="90"></canvas>
+    <div class="stage-tag ps" id="stageTag">SANTA BARBARA<span>STEARNS WHARF</span></div>
+  </div>
+
+  <div class="route" id="route"></div>
+
+  <div class="tesla-box">
+    <div class="tesla-head ps">
+      <span>BUILD-A-TESLA</span>
+      <span class="battery"><span class="cells" id="cells"></span><span id="pct">0%</span></span>
+    </div>
+    <svg id="tesla" viewBox="0 0 50 16" aria-label="Tesla Model 3 progress"></svg>
+    <div class="road-line"></div>
+    <div class="part-name ps" id="partName">COLLECT 7 PARTS TO HIT THE ROAD</div>
+  </div>
+
+  <section class="dialog" id="dialog">
+    <div class="who ps" id="who">▼ RIDDLE 1</div>
+    <div id="riddle"></div>
+    <form class="answer-row" id="form" autocomplete="off">
+      <input id="answer" type="text" placeholder="ANSWER" autocomplete="off" autocorrect="off"
+             autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Your answer">
+      <button class="btn" type="submit">A ▶</button>
+    </form>
+    <div class="controls">
+      <div id="msg" class="ps"></div>
+      <button class="btn alt" id="hintBtn" type="button">B: HINT</button>
+    </div>
+    <div class="hint-text" id="hint"></div>
+  </section>
+
+  <section class="inv">
+    <h3 class="ps">▶ SECRET EVENT FILE</h3>
+    <div class="slots" id="slots"></div>
+  </section>
+
+  <div class="footer ps">INSERT COIN TO CONTINUE · <button id="resetBtn">RESET</button></div>
+</main>
+
+<script>
+/* =========================================================
+   ✏️  EDIT ME — all the secret event details live here
+   ========================================================= */
+const CONFIG = {
+  player:  'KYRA',
+  artist:  'MUMFORD & SONS',
+  date:    'WED · OCT 7, 2026',
+  time:    '7:30 PM',                 // TODO: confirm show time on the ticket
+  venue:   'KIA FORUM',
+  address: '3900 W MANCHESTER BLVD, INGLEWOOD, CA',
+  section: '230',
+  row:     '13',
+  seat:    '11-12',
+  mapUrl:  'https://maps.apple.com/?q=Kia+Forum&address=3900+W+Manchester+Blvd,+Inglewood,+CA'
+};
+
+/* 7 stages — the road trip from Santa Barbara down to Inglewood.
+   answers: any of these is accepted (case / spaces / punctuation ignored). */
+const STAGES = [
+  { place:'SANTA BARBARA', short:'SB',   tag:'STEARNS WHARF',    sub:'Mile 0. Gas tank? Who needs one.',
+    riddle:`Welcome, Player ${CONFIG.player}! A secret night awaits... but first: WHO is playing?\n\nUnscramble the band:[[DUM FORM & NOSS]]`,
+    answers:['mumford and sons','mumford sons','mumford'],
+    hint:'Banjos, waistcoats, stomping crowds. A British folk-rock band.',
+    label:'ARTIST', value:()=>CONFIG.artist, part:'REAR WHEEL' },
+
+  { place:'CARPINTERIA', short:'CARP', tag:"WORLD'S SAFEST BEACH", sub:'Oil rigs on the horizon...',
+    riddle:`Before we leave the 805 behind, a local's question.\n\nSanta Barbara's famous nickname is "The American ________."`,
+    answers:['riviera','the american riviera','american riviera'],
+    hint:'Named after the sunny Mediterranean coast of France & Italy. Starts with R.',
+    label:'DATE', value:()=>CONFIG.date, part:'FRONT WHEEL' },
+
+  { place:'VENTURA', short:'VEN', tag:'CHANNEL ISLANDS', sub:'Islands off the starboard bow.',
+    riddle:`I have a face and two hands, but no arms and no legs.\n\nI can tell you WHEN... but never WHERE.\n\nWhat am I?`,
+    answers:['clock','a clock','watch','a watch','wristwatch'],
+    hint:'Tick... tock... tick... tock...',
+    label:'TIME', value:()=>CONFIG.time, part:'CHASSIS' },
+
+  { place:'MALIBU', short:'MAL', tag:'SURFRIDER BEACH', sub:'Surf\'s up. Windows down.',
+    riddle:`Ancient Romans gathered in me to talk.\nThe Lakers once made me "Fabulous."\nToday I'm round, I'm in Inglewood, and my first name is a car brand that ISN'T Tesla.\n\nWhat am I? (just my last name)`,
+    answers:['forum','the forum','kia forum','the kia forum','great western forum','fabulous forum'],
+    hint:'Rhymes with "quorum."',
+    label:'VENUE', value:()=>`${CONFIG.venue}<br><span style="font-size:17px;color:#9fe">${CONFIG.address}</span>`, part:'BODY PANELS' },
+
+  { place:'SANTA MONICA', short:'SM', tag:'END OF ROUTE 66', sub:'Ferris wheel spinning at sunset.',
+    riddle:`No gas. No oil. No tailpipe smoke.\nYour Tesla drinks only me.\nBen Franklin went looking for me with a kite and a key.\n\nWhat am I?`,
+    answers:['electricity','electric','lightning','electrons','power','energy','electrical','electric power'],
+    hint:'⚡ It lives in batteries AND in thunderstorms.',
+    label:'SECTION', value:()=>CONFIG.section, part:'GLASS ROOF' },
+
+  { place:'LAX', short:'LAX', tag:'INGLEWOOD EXIT AHEAD', sub:'Planes overhead. Almost there.',
+    riddle:`Time for some band trivia. Finish the banjo anthem by the artist you unlocked:\n\n"I will ____, I will ____ for you."`,
+    answers:['wait','i will wait'],
+    hint:'The opposite of "hurry up!"',
+    label:'ROW', value:()=>CONFIG.row, part:'WINDOWS' },
+
+  { place:'INGLEWOOD', short:'FORUM', tag:'FINAL DESTINATION', sub:'Lights on. Crowd roaring.',
+    riddle:`FINAL RIDDLE!\n\nI have a neck but no head, a body but no legs, and five strings that get plucked while the whole crowd stomps along.\n\nWhat am I?`,
+    answers:['banjo','a banjo','the banjo'],
+    hint:'Twangy, round, and very bluegrass. Winston plays one on stage.',
+    label:'SEAT', value:()=>CONFIG.seat, part:'HEADLIGHTS + FULL CHARGE' },
+];
+
+/* ---------- state ---------- */
+const KEY = 'kyra-secret-quest-v1';
+let state = { stage:0 };
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s.stage==='number') state = s; } catch(e){}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} };
+
+const $ = s => document.querySelector(s);
+const norm = s => s.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]/g,'');
+
+/* ---------- chiptune audio ---------- */
+let AC = null, muted = false;
+function tone(f, d, when=0, type='square', vol=.05){
+  if (!AC || muted) return;
+  const t = AC.currentTime + when, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .02);
+}
+const sfx = {
+  blip: () => tone(880, .03, 0, 'square', .02),
+  start: () => [523,659,784,1047].forEach((f,i)=>tone(f,.12,i*.09)),
+  good: () => [659,784,988,1319,1568].forEach((f,i)=>tone(f,.14,i*.07)),
+  bad: () => { tone(196,.18,0,'sawtooth',.05); tone(147,.25,.15,'sawtooth',.05); },
+  hint: () => [988,784].forEach((f,i)=>tone(f,.1,i*.08,'triangle',.08)),
+  fanfare: () => {
+    const n=[523,523,523,659,784,0,659,784,1047,1047];
+    n.forEach((f,i)=>f&&tone(f,.2,i*.13));
+    [262,330,392,523].forEach((f,i)=>tone(f,.5,1.3+i*.02,'triangle',.06));
+  }
+};
+
+/* =========================================================
+   TESLA MODEL 3 — pixel art progress bar (7 parts)
+   ========================================================= */
+const BODY = [
+  "..............rrrrrrrrrr................",
+  "...........rrrwwwwwwrwwwwrr.............",
+  ".........rrwwwwwwwwwrwwwwwwrr...........",
+  ".......rrrwwwwwwwwwwrwwwwwwwwrrr........",
+  "..tbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb..",
+  ".tbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbh.",
+  ".bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.",
+  ".bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.",
+  ".kkkk.......kkkkkkkkkkkkkkkkk.......kkk.",
+  "..kk.........kkkkkkkkkkkkkkk.........k..",
+];
+// part #: 1 rear wheel, 2 front wheel, 3 chassis, 4 body, 5 roof, 6 windows, 7 lights
+function buildTesla(){
+  const px = [];
+  BODY.forEach((row,y)=>[...row].forEach((ch,x)=>{
+    if (ch==='.') return;
+    let c, p;
+    if (ch==='r'){ c='#14142b'; p=5; }
+    else if (ch==='w'){ c = (x+y)%7===0 ? '#e6f7ff' : '#7fd3ff'; p=6; }
+    else if (ch==='b'){ c = y===4 ? '#ff5a5a' : y===5 ? '#e01e37' : '#b5121f'; p = y<=5 ? 4 : 3; }
+    else if (ch==='k'){ c='#5c0a14'; p=3; }
+    else if (ch==='t'){ c='#ff2a2a'; p=7; }
+    else if (ch==='h'){ c='#fff3a0'; p=7; }
+    px.push({x,y,c,p});
+  }));
+  // wheels
+  [[8,1],[32,2]].forEach(([cx,p])=>{
+    for (let dy=-3; dy<=3; dy++) for (let dx=-3; dx<=3; dx++){
+      const d = dx*dx+dy*dy; if (d>10) continue;
+      const c = d===0 ? '#444' : d<=2 ? '#c9c9d6' : '#151515';
+      px.push({x:cx+dx, y:11+dy, c, p});
+    }
+  });
+  // door handle + T badge (part 4)
+  px.push({x:24,y:6,c:'#ffd0d0',p:4},{x:13,y:6,c:'#ffd0d0',p:4});
+  const svg = $('#tesla');
+  svg.innerHTML = '<polygon id="beam" points="39,5 50,1 50,11" fill="#fff6a8"/>' +
+    px.map(q=>`<rect x="${q.x}" y="${q.y}" width="1" height="1" fill="${q.c}" data-p="${q.p}"/>`).join('');
+}
+function renderTesla(count, animatePart){
+  document.querySelectorAll('#tesla rect').forEach(r=>{
+    const p = +r.dataset.p, on = p<=count;
+    r.classList.toggle('off', !on);
+    r.classList.remove('pop');
+    if (animatePart && p===animatePart){
+      void r.getBBox; r.style.animationDelay = (+r.getAttribute('x'))*25 + 'ms';
+      r.classList.add('pop');
+    }
+  });
+  $('#beam').classList.toggle('on', count>=7);
+  $('#cells').innerHTML = Array.from({length:7},(_,i)=>`<s class="${i<count?'on':''}"></s>`).join('');
+  $('#pct').textContent = Math.round(count/7*100)+'%';
+  $('#partName').textContent = count===0 ? 'COLLECT 7 PARTS TO HIT THE ROAD'
+    : count>=7 ? 'MODEL 3 COMPLETE · READY TO DRIVE!'
+    : `PARTS ${count}/7 · LAST: ${STAGES[count-1].part}`;
+}
+
+/* =========================================================
+   SCENE — 160×90 canvas, one coastal stop per stage
+   ========================================================= */
+const cv = $('#scene'), g = cv.getContext('2d');
+const R = (x,y,w,h,c)=>{ g.fillStyle=c; g.fillRect(x|0,y|0,w|0,h|0); };
+const P = (x,y,c)=>R(x,y,1,1,c);
+function line(x0,y0,x1,y1,c){ x0|=0;y0|=0;x1|=0;y1|=0;
+  const dx=Math.abs(x1-x0), dy=-Math.abs(y1-y0), sx=x0<x1?1:-1, sy=y0<y1?1:-1; let e=dx+dy;
+  for(;;){ P(x0,y0,c); if(x0===x1&&y0===y1)break; const e2=2*e; if(e2>=dy){e+=dy;x0+=sx;} if(e2<=dx){e+=dx;y0+=sy;} } }
+function disc(cx,cy,r,c){ for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++) if(x*x+y*y<=r*r+r*.8) P(cx+x,cy+y,c); }
+const rnd = (i)=>{ const s=Math.sin(i*127.1)*43758.5453; return s-Math.floor(s); };
+
+const SKIES = [
+  ['#2f8fe8','#62b6ff','#a9dcff'], // SB morning
+  ['#2a7fe0','#58aaff','#9fd2ff'], // Carp
+  ['#3a7ad6','#8bb8e8','#ffe0a3'], // Ventura afternoon
+  ['#3e5fb8','#f08a4b','#ffcf7a'], // Malibu golden hour
+  ['#4a2380','#e0457b','#ff9e5e'], // Santa Monica sunset
+  ['#151240','#3d2470','#b23d78'], // LAX dusk
+  ['#07071f','#120f3d','#261d63'], // Forum night
+  ['#07071f','#120f3d','#261d63'], // finale
+];
+
+function sky(i,t){
+  const s = SKIES[i], bands=[[0,22],[22,44],[44,62]];
+  bands.forEach(([a,b],k)=>R(0,a,160,b-a,s[k]));
+  // dithered band edges — very 1990
+  [22,44].forEach((y,k)=>{ for(let x=0;x<160;x++){ if(x%2===0) P(x,y-1,s[k+1]); if(x%2===1) P(x,y,s[k]); if(x%4===0) P(x,y-2,s[k+1]); } });
+  if (i>=5){ for(let k=0;k<40;k++){ const x=rnd(k)*160|0, y=rnd(k+99)*40|0; if(((t/300+k)|0)%5) P(x,y,k%3?'#fff':'#ffd23f'); } }
+  if (i<=4){
+    const sx = 122 - i*6, sy = 12 + i*10, col = i>=3 ? '#ffd23f' : '#fff6b0';
+    disc(sx,sy,i>=3?9:6,col);
+    if (i===4){ for(let y=sy+1;y<=sy+9;y+=3) R(sx-10,y,21,1,s[2]); } // synthwave sun stripes
+  } else { disc(28,14,5,'#f4f1d0'); disc(30,13,4,SKIES[i][0]); } // crescent moon
+}
+function mountains(i){
+  for(let x=0;x<160;x++){
+    const h = 46 + Math.sin(x*.06+i)*5 + Math.sin(x*.021+i*2)*7;
+    R(x,h,1,62-h, i===3?'#7a4a6a':'#6b5a8f');
+    const h2 = 54 + Math.sin(x*.09+i*3)*3 + Math.sin(x*.035)*3;
+    R(x,h2,1,62-h2, i===3?'#5a3a4a':'#4a6a4a');
+  }
+}
+function skyline(i){
+  let x=0,k=0; while(x<160){ const w=4+(rnd(k)*8|0), h=6+(rnd(k+50)*20|0);
+    R(x,62-h,w,h, i>=5?'#1a1838':'#3a2058');
+    for(let wy=62-h+2; wy<60; wy+=3) for(let wx=x+1; wx<x+w-1; wx+=2) if(rnd(wx*wy+k)>.55) P(wx,wy, i>=5?'#ffd23f':'#ff9ebc');
+    x+=w+1; k++; }
+}
+function ocean(i,t){
+  const deep = i>=4 ? '#2a2a7a' : '#1f5fbf', lite = i>=4 ? '#4a4ab0' : '#3f8fe0';
+  R(0,62,160,14,deep);
+  for(let y=64;y<76;y+=3) for(let x=((t/80+y*3)|0)%8-8;x<160;x+=8) R(x,y,3,1,lite);
+  for(let k=0;k<18;k++){ const x=((k*37 + t*.012*(k%3+1))%170)-5, y=63+(k*7)%12; if(((t/200+k)|0)%3) R(x,y,2,1,'#fff'); }
+  if (i<=4){ const sx=122-i*6; for(let y=63;y<76;y+=2) R(sx-3+(((t/150+y)|0)%3),y,6,1,i>=3?'#ffd23f':'#cfe9ff'); }
+}
+function palm(x,base,h,dark){
+  const trunk = dark?'#2a1a10':'#7a4a24', leaf = dark?'#0f2a1a':'#2e9e4a';
+  for(let y=0;y<h;y++) P(x+Math.round(Math.sin(y*.25)*1.2), base-y, trunk);
+  const tx = x+Math.round(Math.sin(h*.25)*1.2), ty = base-h;
+  [[-1,0],[1,0]].forEach(([d])=>{ for(let k=1;k<7;k++){ P(tx+d*k, ty+Math.floor(k*k/10), leaf); P(tx+d*k, ty-1+Math.floor(k*k/12), leaf);} });
+  for(let k=1;k<5;k++){ P(tx-k+1,ty-k+1,leaf); P(tx+k-1,ty-k+1,leaf); }
+  P(tx,ty+1,'#5a3a1a');
+}
+function pier(x0,y,c){ R(x0,y,160-x0,2,c); for(let x=x0+2;x<160;x+=6) R(x,y+2,1,76-y-2,'#3a2a1a'); }
+
+function landmark(i,t){
+  if (i===0){ pier(70,64,'#8b5a2b'); R(118,58,14,6,'#f0e6d6'); R(117,57,16,1,'#b33a2a'); R(139,59,10,5,'#e0d0b0'); R(138,58,12,1,'#b33a2a');
+    R(122,60,2,2,'#4a90e2'); R(128,60,2,2,'#4a90e2'); }
+  if (i===1){ [[112,1],[140,.7]].forEach(([x,s])=>{ R(x,56,12*s,2,'#555'); R(x+1,58,1,6,'#333'); R(x+12*s-2,58,1,6,'#333'); R(x+4*s,48,2,8,'#666'); P(x+4*s,47,'#ff4f4f'); }); }
+  if (i===2){ for(let x=10;x<80;x++){ const h=Math.max(0,Math.sin((x-10)*.09)*5); if(h>0) R(x,62-h,1,h,'#7a6aa0'); }
+    for(let x=95;x<130;x++){ const h=Math.max(0,Math.sin((x-95)*.09)*3); if(h>0) R(x,62-h,1,h,'#7a6aa0'); }
+    pier(120,65,'#7a5030'); }
+  if (i===3){ for(let x=118;x<160;x++){ const top = 76 - (x-118)*.7 - Math.sin(x*.4)*1.5; R(x,top,1,76-top,'#9a6a40'); R(x,top,1,2,'#4a8a3a'); }
+    const sx = 50 + Math.sin(t/900)*8; R(sx-6,67,14,2,'#e8f6ff'); R(sx,66,6,1,'#ffffff'); R(sx+1,64,1,2,'#ffd2a8'); R(sx-1,63,3,1,'#ffd2a8'); R(sx-1,66,5,1,'#ff4fa3'); P(sx+1,62,'#3a2010'); }
+  if (i===4){ pier(60,64,'#6a4020'); const cx=110, cy=48, r=11, a=t/1500;
+    for(let k=0;k<8;k++){ const ang=a+k*Math.PI/4; line(cx,cy,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,'#c9c9d6'); }
+    for(let k=0;k<40;k++){ const ang=k/40*Math.PI*2; P(cx+Math.cos(ang)*r, cy+Math.sin(ang)*r, ['#ff4fa3','#ffd23f','#2de2e6'][(k+((t/200)|0))%3]); }
+    line(cx,cy,cx-5,64,'#888'); line(cx,cy,cx+5,64,'#888');
+    for(let x=130;x<158;x++) P(x, 56+Math.round(Math.abs(Math.sin(x*.25))*6), '#ff4f4f'); for(let x=130;x<158;x+=4) R(x,62,1,2,'#888'); }
+  if (i===5){ R(94,40,26,3,'#e8e8f0'); R(98,38,18,2,'#cfd0e0'); R(104,36,6,2,'#2de2e6');
+    line(97,43,90,62,'#e8e8f0'); line(117,43,124,62,'#e8e8f0'); line(100,43,108,62,'#cfd0e0'); line(114,43,106,62,'#cfd0e0');
+    const px = 170 - ((t/25)%200), py = 18 + Math.sin(t/700)*2;
+    R(px,py,12,2,'#f4f4f4'); R(px+9,py-3,2,3,'#f4f4f4'); R(px+4,py+2,4,1,'#bbb'); R(px+4,py-1,4,1,'#bbb'); P(px,py,((t/300)|0)%2?'#ff2a2a':'#fff'); }
+  if (i>=6){
+    // searchlights
+    g.save(); g.globalAlpha=.18; g.fillStyle='#fff6b0';
+    [[50,1],[110,-1]].forEach(([x,d])=>{ const a=Math.sin(t/1200*d)*0.5 - Math.PI/2;
+      g.beginPath(); g.moveTo(x,46); g.lineTo(x+Math.cos(a-.08)*80,46+Math.sin(a-.08)*80); g.lineTo(x+Math.cos(a+.08)*80,46+Math.sin(a+.08)*80); g.fill(); });
+    g.restore();
+    R(46,45,68,17,'#efe4cf'); R(44,42,72,3,'#fff4e0'); R(48,40,64,2,'#d9c8a8');
+    for(let x=48;x<114;x+=4) R(x,46,2,16,'#b04a3a');
+    R(70,52,20,10,'#2a1a30'); for(let x=71;x<89;x+=2) P(x,53,((t/150+x)|0)%2?'#ffd23f':'#ff4fa3');
+  }
+}
+function ground(i,t){
+  if (i<=5){ R(0,76,160,4,'#f2d48b'); for(let x=0;x<160;x+=5) P(x+(x*7)%3,77+(x%2),'#d9b86a'); }
+  else { R(0,62,160,14,'#2b2b3b'); for(let x=4;x<160;x+=10) R(x,66,1,8,'#6a6a7a'); R(0,76,160,4,'#4a4a5a'); }
+  R(0,80,160,10,'#333344'); R(0,80,160,1,'#555566');
+  const off = (t/40)%12; for(let x=-12+off;x<160;x+=12) R(x,85,6,1,'#ffd23f');
+}
+function miniTesla(t, i){
+  const x = i>=7 ? 70 + Math.sin(t/300)*2 : ((t/30)%200)-20, y = 81;
+  const spr = ["..rrrr....",".rwwwwr...","tbbbbbbbbh","bbbbbbbbbb",".k.....k.."];
+  const col = {r:'#14142b',w:'#7fd3ff',b:'#e01e37',t:'#ff2a2a',h:'#fff3a0',k:'#111'};
+  spr.forEach((row,yy)=>[...row].forEach((c,xx)=>{ if(c!=='.') P(x+xx,y+yy,col[c]); }));
+  if (i>=5) { g.save(); g.globalAlpha=.3; R(x+10,y+2,10,2,'#fff6a8'); g.restore(); }
+}
+function drawScene(i,t){
+  sky(i,t);
+  if (i<=3) mountains(i); else skyline(i);
+  if (i<=5) ocean(i,t);
+  ground(i,t);
+  landmark(i,t);
+  const dark = i>=5;
+  if (i<=5){ palm(14,79,18,dark); palm(32,79,13,dark); } else { palm(10,79,20,true); palm(150,79,17,true); }
+  if (i===0||i===4) palm(60,79,15,dark);
+  miniTesla(t,i);
+}
+let sceneIdx = 0;
+function loop(t){ drawScene(sceneIdx, t); requestAnimationFrame(loop); }
+
+/* =========================================================
+   UI
+   ========================================================= */
+function buildRoute(){
+  $('#route').innerHTML = STAGES.map((s,i)=>`<div class="stop" data-i="${i}"><i></i><b>${s.short}</b></div>`).join('');
+}
+function buildSlots(){
+  $('#slots').innerHTML = STAGES.map((s,i)=>
+    `<div class="slot ${i<4?'wide':''}" id="slot${i}"><small>${i+1}. ${s.label}</small><div>🔒 ???</div></div>`).join('');
+  // section/row/seat sit in a row of three
+  $('#slots').style.gridTemplateColumns = '1fr 1fr 1fr';
+  [0,1,2,3].forEach(i=>$('#slot'+i).style.gridColumn='span 3');
+}
+function fillSlot(i, flash){
+  const el = $('#slot'+i); el.classList.add('got');
+  el.querySelector('div').innerHTML = STAGES[i].value();
+  if (flash){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+}
+function updateHUD(){
+  const n = state.stage;
+  sceneIdx = Math.min(n, 7);
+  $('#hudStage').textContent = n>=7 ? 'CLEAR!' : `STAGE ${n+1}/7`;
+  document.querySelectorAll('.stop').forEach(el=>{
+    const i=+el.dataset.i; el.className = 'stop' + (i<n?' done':'') + (i===n?' here':'');
+  });
+  const s = STAGES[Math.min(n,6)];
+  $('#stageTag').innerHTML = `${s.place}<span>${s.tag}</span>`;
+  for (let i=0;i<n;i++) fillSlot(i,false);
+}
+
+let typing = null;
+function typeRiddle(text){
+  clearInterval(typing);
+  const box = $('#riddle');
+  // [[...]] = big scrambled-word block
+  const parts = text.split(/\[\[|\]\]/);
+  const full = parts.map((p,i)=> i%2 ? `<span class="scramble">${p}</span>` : p.replace(/</g,'&lt;')).join('');
+  const plain = parts.join('');
+  let k = 0;
+  const finish = ()=>{ clearInterval(typing); typing=null; box.innerHTML = full; };
+  box.onclick = finish;
+  typing = setInterval(()=>{
+    k++; if (k%2===0 && plain[k]!==' ') sfx.blip();
+    // render plain text progressively; swap to formatted when done
+    box.innerHTML = plain.slice(0,k).replace(/</g,'&lt;') + '<span class="caret"></span>';
+    if (k>=plain.length) finish();
+  }, 28);
+}
+
+function showStage(n){
+  const s = STAGES[n];
+  $('#who').textContent = `▼ RIDDLE ${n+1} OF 7`;
+  $('#answer').value = ''; $('#msg').textContent = ''; $('#msg').className='ps';
+  $('#hint').classList.remove('show'); $('#hint').textContent = s.hint;
+  $('#scNum').textContent = `STAGE ${n+1}`; $('#scPlace').textContent = s.place; $('#scSub').textContent = s.sub;
+  $('#stagecard').classList.add('show');
+  sfx.start();
+  setTimeout(()=>{ $('#stagecard').classList.remove('show'); typeRiddle(s.riddle); }, 1700);
+}
+
+function submit(e){
+  e.preventDefault();
+  const n = state.stage; if (n>=7) return;
+  const guess = norm($('#answer').value);
+  if (!guess) return;
+  const s = STAGES[n];
+  if (s.answers.some(a=>norm(a)===guess)){
+    $('#answer').blur();
+    sfx.good();
+    state.stage = n+1; save();
+    renderTesla(state.stage, state.stage);
+    fillSlot(n, true);
+    $('#ulLabel').textContent = s.label;
+    $('#ulValue').innerHTML = s.value();
+    $('#ulPart').textContent = `+ TESLA PART: ${s.part}`;
+    $('#ulNext').textContent = state.stage>=7 ? 'SEE YOUR TICKET ▶' : 'DRIVE ON ▶';
+    $('#unlock').classList.add('show');
+  } else {
+    sfx.bad();
+    const d = $('#dialog'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
+    const lines = ['NOPE! TRY AGAIN','SO CLOSE... MAYBE','GAME NOT OVER YET','THINK, KYRA, THINK!','TRY B FOR A HINT'];
+    $('#msg').textContent = lines[(Math.random()*lines.length)|0]; $('#msg').className='ps bad';
+  }
+}
+
+function next(){
+  $('#unlock').classList.remove('show');
+  updateHUD();
+  if (state.stage>=7) showFinal(); else showStage(state.stage);
+}
+
+function showFinal(){
+  sceneIdx = 7;
+  $('#fName').textContent = CONFIG.player; $('#tName').textContent = CONFIG.player;
+  $('#tArtist').textContent = CONFIG.artist;
+  $('#tDate').textContent = CONFIG.date;
+  $('#tTime').textContent = 'SHOW ' + CONFIG.time;
+  $('#tVenue').textContent = CONFIG.venue;
+  $('#tAddr').textContent = CONFIG.address;
+  $('#tSec').textContent = CONFIG.section; $('#tRow').textContent = CONFIG.row; $('#tSeat').textContent = CONFIG.seat;
+  $('#mapLink').href = CONFIG.mapUrl;
+  $('#final').classList.add('show');
+  sfx.fanfare(); confetti();
+}
+
+/* pixel confetti / fireworks */
+function confetti(){
+  const c = $('#confetti'), x = c.getContext('2d');
+  c.width = innerWidth/4|0; c.height = innerHeight/4|0; c.style.width='100%'; c.style.height='100%';
+  const cols=['#ff4fa3','#ffd23f','#2de2e6','#4be37a','#e01e37','#fff'];
+  let parts=[];
+  const burst=()=>{ const cx=Math.random()*c.width, cy=Math.random()*c.height*.5;
+    for(let k=0;k<40;k++){ const a=Math.random()*Math.PI*2, v=Math.random()*1.6+.4; parts.push({x:cx,y:cy,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:60+Math.random()*30,c:cols[k%cols.length]}); } };
+  let f=0;
+  (function step(){
+    x.clearRect(0,0,c.width,c.height);
+    if (f%25===0 && f<300) burst();
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.03; p.l--; x.fillStyle=p.c; x.fillRect(p.x|0,p.y|0,1,1); });
+    parts = parts.filter(p=>p.l>0); f++;
+    if (f<420 || parts.length) requestAnimationFrame(step); else x.clearRect(0,0,c.width,c.height);
+  })();
+}
+
+/* ---------- wire up ---------- */
+function init(){
+  ['#pname','#hudName'].forEach(s=>$(s).textContent=CONFIG.player);
+  buildTesla(); buildRoute(); buildSlots();
+  renderTesla(state.stage); updateHUD();
+  requestAnimationFrame(loop);
+
+  $('#startBtn').onclick = ()=>{
+    try { AC = new (window.AudioContext||window.webkitAudioContext)(); AC.resume(); } catch(e){}
+    $('#title').classList.remove('show');
+    if (state.stage>=7) showFinal(); else showStage(state.stage);
+  };
+  $('#form').addEventListener('submit', submit);
+  $('#answer').addEventListener('focus', ()=>setTimeout(()=>$('#dialog').scrollIntoView({block:'center',behavior:'smooth'}),300));
+  $('#hintBtn').onclick = ()=>{ $('#hint').classList.add('show'); sfx.hint(); };
+  $('#ulNext').onclick = next;
+  $('#muteBtn').onclick = ()=>{ muted=!muted; $('#muteBtn').textContent = muted?'🔇':'🔊'; };
+  const reset = ()=>{ if (confirm('Reset all progress?')){ state={stage:0}; save(); location.reload(); } };
+  $('#resetBtn').onclick = reset; $('#replay').onclick = reset;
+}
+init();
+</script>
+</body>
+</html>
